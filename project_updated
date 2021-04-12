@@ -1,0 +1,77 @@
+import yaml
+import wikipedia
+from random_word import RandomWords
+import re
+from flask import Flask, request
+from pyhtml import html, body, h1, p, form, input_, label
+import string
+
+app = Flask(__name__)
+
+def generatePuzzle():
+    global tgt
+    answer = RandomWords().get_random_word()
+    print(answer)
+    tgt = wikipedia.search(answer,results=1)[0]
+    print(tgt)
+    result = wikipedia.summary(tgt)
+    result = re.sub(tgt,"?????", result)
+    result = re.sub(tgt.lower(), "?????", result)
+    return result
+
+@app.route('/')
+def survey():
+    initial_form = form(action='quiz')(
+        label(
+            input_(type="submit", value='Begin')
+        )
+    )
+    response = html(
+        body(
+            h1('Wiki Guesser'),
+            p('Welcome to Wiki Guesser, a game designed to test your general knowledge.'),
+            initial_form
+        )
+    )
+    return  str(response) 
+
+@app.route('/quiz', methods=["GET", "POST"])
+def begin():
+    word = generatePuzzle()
+    puzzle_form = form(action="quiz")(
+        label(
+            input_(type="submit", value="New Puzzle")))
+    guessing_form = form(action="analysis", name="any")(
+        input_(type="textbox", name="word", placeholder="Please type in your answer"),
+        input_(type="submit"))
+    response = html(
+        body(
+            guessing_form,
+            puzzle_form
+            
+        )
+    )
+    return str(response) + word
+
+@app.route('/analysis', methods=["GET", "POST"])
+def analysis():
+   
+    global tgt
+    if tgt.lower() == request.form['word'].lower():
+        message = "You are correct"
+    else:
+        message = "You are wrong. Try again."
+    final_form = form(action='quiz')(
+        label(
+            input_(type="submit", value='New Puzzle')
+        )
+    )
+    final_response = html(
+        body(
+            final_form
+        )
+    )
+    return message +  str(final_response)
+
+if __name__ == "__main__":
+    app.run(debug=True)
